@@ -1,0 +1,1139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!--
+  这条笨鱼出生在 2026 年 10 月 25 日。
+  它的所有记录只存在你打开它的那个浏览器里，不会上传到任何地方。
+  如果很多年以后你又在一个旧硬盘、旧手机、旧收藏夹里翻到这个文件：
+  希望你那天过得还不错。
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#02131f">
+<title>笨笨鱼大冒险</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#02131f}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:#dff3ff;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  }
+  canvas{display:block;position:absolute;inset:0;touch-action:none}
+
+  #hud{
+    position:absolute;inset:0;padding:14px 16px;pointer-events:none;
+    display:flex;justify-content:space-between;align-items:flex-start;
+    opacity:0;transition:opacity .3s ease;
+  }
+  body.playing #hud{opacity:1}
+  #hud .left,#hud .right{display:flex;gap:10px;align-items:center}
+  .chip{
+    background:rgba(6,30,48,.55);border:1px solid rgba(120,220,255,.18);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    border-radius:14px;padding:7px 13px;display:flex;gap:9px;align-items:center;
+    font-variant-numeric:tabular-nums;
+  }
+  .lbl{font-size:11px;letter-spacing:.16em;color:#7fc4e6;text-transform:uppercase}
+  #score{font-size:20px;font-weight:700;line-height:1;color:#e8fbff;transition:transform .12s}
+  #score.pop{transform:scale(1.18)}
+  #lives{font-size:15px;letter-spacing:1px;line-height:1}
+  #combo{
+    font-size:13px;font-weight:700;color:#ffd166;letter-spacing:.06em;
+    opacity:0;transition:opacity .18s;text-shadow:0 0 14px rgba(255,209,102,.55);
+    padding-top:4px;
+  }
+  .iconBtn{
+    pointer-events:auto;width:38px;height:38px;border-radius:12px;border:1px solid rgba(120,220,255,.18);
+    background:rgba(6,30,48,.55);color:#cdeeff;font-size:15px;line-height:1;cursor:pointer;
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;padding:0;
+    transition:background .15s,transform .1s;
+  }
+  .iconBtn:hover{background:rgba(20,70,105,.7)}
+  .iconBtn:active{transform:scale(.94)}
+
+  .overlay{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 42%,rgba(3,20,34,.25),rgba(2,10,18,.86));
+    transition:opacity .28s ease;
+  }
+  .overlay.hidden{opacity:0;pointer-events:none}
+  .card{
+    text-align:center;padding:32px 40px;border-radius:26px;max-width:92vw;
+    background:linear-gradient(180deg,rgba(12,48,74,.86),rgba(6,26,42,.92));
+    border:1px solid rgba(120,220,255,.22);
+    box-shadow:0 28px 70px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  h1{
+    font-size:clamp(28px,7vw,44px);line-height:1.15;letter-spacing:.05em;
+    background:linear-gradient(180deg,#c8f6ff,#45bdf2);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  h2{font-size:clamp(22px,5.5vw,32px);letter-spacing:.04em;color:#e8fbff}
+  .sub{margin-top:12px;font-size:14px;line-height:1.75;color:#93c8e2}
+  .sub b{color:#8be8ff;font-weight:600}
+  .btn{
+    margin-top:24px;font:inherit;font-size:17px;font-weight:700;letter-spacing:.04em;
+    cursor:pointer;border:none;border-radius:999px;padding:14px 42px;color:#03202f;
+    background:linear-gradient(180deg,#9deeff,#33b3ee);
+    box-shadow:0 12px 26px rgba(53,182,239,.4),inset 0 1px 0 rgba(255,255,255,.6);
+    transition:transform .12s,box-shadow .12s;
+  }
+  .btn:hover{box-shadow:0 14px 32px rgba(53,182,239,.55),inset 0 1px 0 rgba(255,255,255,.6)}
+  .btn:active{transform:translateY(2px) scale(.98)}
+  .keys{margin-top:20px;font-size:12px;color:#6ba6c4;line-height:1.9;letter-spacing:.02em}
+  .keys kbd{
+    display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;
+    background:rgba(120,220,255,.1);border:1px solid rgba(120,220,255,.2);color:#a9dcf3;
+    font-family:inherit;
+  }
+  .statRow{display:flex;gap:34px;justify-content:center;margin-top:22px}
+  .stat .k{font-size:11px;letter-spacing:.18em;color:#7fc4e6}
+  .stat .v{font-size:32px;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums;color:#eafcff}
+  .newBest{color:#ffd166!important}
+
+  /* 记录 / 回忆 */
+  .miniStats{
+    margin-top:16px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;
+    font-size:12.5px;color:#8fc4de;min-height:18px;
+  }
+  .miniStats b{color:#c8f2ff;font-weight:700;font-variant-numeric:tabular-nums}
+  .linkBtn{
+    display:inline-block;margin-top:12px;background:none;border:none;cursor:pointer;
+    font:inherit;font-size:13px;color:#79bcda;padding:5px 8px;
+    text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(121,188,218,.45);
+    transition:color .15s;
+  }
+  .linkBtn:hover{color:#c2f0ff}
+  .memCard{max-width:min(430px,92vw);max-height:84vh;overflow-y:auto;text-align:center}
+  .memLine{font-size:13.5px;color:#9dcfe6;margin-top:11px;line-height:1.8}
+  .memLine b{color:#eafcff;font-size:15px}
+  .memLine b.gold{color:#ffd166;font-size:18px}
+  .memEmpty{font-size:13.5px;color:#8fc4de;margin-top:16px;line-height:2}
+  .memList{margin-top:18px;border-top:1px solid rgba(120,220,255,.14);padding-top:8px;text-align:left}
+  .memRow{
+    display:flex;justify-content:space-between;gap:16px;padding:7px 2px;font-size:12.5px;
+    color:#7fb3cd;border-bottom:1px dashed rgba(120,220,255,.08);
+  }
+  .memRow:last-child{border-bottom:none}
+  .memRow .s{color:#cdeeff;font-weight:700;font-variant-numeric:tabular-nums}
+  .memRow.top{color:#e8c579}
+  .memRow.top .s{color:#ffd166}
+
+  @media (max-width:420px){ .card{padding:26px 24px} .btn{padding:13px 34px} }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div class="left">
+    <div class="chip"><span class="lbl">分数</span><span id="score">0</span></div>
+    <div id="combo"></div>
+  </div>
+  <div class="right">
+    <div class="chip"><span id="lives">🐟🐟🐟</span></div>
+    <button id="soundBtn" class="iconBtn" title="声音">🔊</button>
+    <button id="pauseBtn" class="iconBtn" title="暂停">❚❚</button>
+  </div>
+</div>
+
+<div id="startPanel" class="overlay">
+  <div class="card">
+    <h1>笨笨鱼大冒险</h1>
+    <p class="sub">
+      吃掉<b>比你小</b>的鱼，躲开<b>比你大</b>的鱼<br>
+      青色是猎物 · 红色是天敌 · 吃得越多长得越大
+    </p>
+    <button id="startBtn" class="btn">开始游戏</button>
+    <div class="miniStats">
+      <span>最高分 <b id="bestTop">0</b></span>
+      <span id="playsStat"></span>
+      <span id="lastStat"></span>
+    </div>
+    <div><button class="linkBtn memOpen">翻翻我的记录</button></div>
+    <p class="keys">
+      <kbd>鼠标</kbd> / <kbd>手指拖动</kbd> 游动　<kbd>WASD</kbd> <kbd>方向键</kbd> 也行<br>
+      <kbd>空格</kbd> 暂停
+    </p>
+  </div>
+</div>
+
+<div id="overPanel" class="overlay hidden">
+  <div class="card">
+    <h2>被吃掉了…</h2>
+    <div class="statRow">
+      <div class="stat"><div class="k">本局得分</div><div class="v" id="finalScore">0</div></div>
+      <div class="stat"><div class="k">最高分</div><div class="v" id="finalBest">0</div></div>
+    </div>
+    <button id="restartBtn" class="btn">再来一局</button>
+    <div><button class="linkBtn memOpen">看看记录</button></div>
+    <p class="keys">下次记得：小口吃，别贪大</p>
+  </div>
+</div>
+
+<div id="pausePanel" class="overlay hidden">
+  <div class="card">
+    <h2>暂停中</h2>
+    <p class="sub">鱼也要喘口气</p>
+    <button id="resumeBtn" class="btn">继续</button>
+    <p class="keys"><kbd>空格</kbd> 也能继续</p>
+  </div>
+</div>
+
+<div id="memPanel" class="overlay hidden">
+  <div class="card memCard">
+    <h2>我的记录</h2>
+    <div id="memBody"></div>
+    <button id="memSaveBtn" class="btn">封存成文件</button>
+    <div><button id="memCloseBtn" class="linkBtn">关掉</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+
+  var elScore = document.getElementById('score');
+  var elLives = document.getElementById('lives');
+  var elCombo = document.getElementById('combo');
+  var elBestTop = document.getElementById('bestTop');
+  var startPanel = document.getElementById('startPanel');
+  var overPanel = document.getElementById('overPanel');
+  var pausePanel = document.getElementById('pausePanel');
+  var btnStart = document.getElementById('startBtn');
+  var btnRestart = document.getElementById('restartBtn');
+  var btnResume = document.getElementById('resumeBtn');
+  var btnPause = document.getElementById('pauseBtn');
+  var btnSound = document.getElementById('soundBtn');
+  var elFinal = document.getElementById('finalScore');
+  var elFinalBest = document.getElementById('finalBest');
+  var memPanel = document.getElementById('memPanel');
+  var memBody = document.getElementById('memBody');
+  var memCloseBtn = document.getElementById('memCloseBtn');
+  var elPlays = document.getElementById('playsStat');
+  var elLast = document.getElementById('lastStat');
+
+  var TAU = Math.PI * 2;
+  var W = 0, H = 0, DPR = 1;
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  var S = { MENU: 0, PLAY: 1, PAUSE: 2, OVER: 3 };
+  var state = S.MENU;
+
+  var score = 0, lives = 3, combo = 1, comboTimer = 0;
+  var best = 0;
+  try { best = Number(localStorage.getItem('benben_best') || 0) || 0; } catch (e) { best = 0; }
+  var elapsed = 0, spawnTimer = 0, spawnEvery = 900;
+  var shake = 0, flash = 0, ambientTimer = 0;
+  var muted = false;
+
+  var player = { x: 0, y: 0, vx: 0, vy: 0, r: 14, face: 1, invuln: 0, t: 0, bubbleT: 0 };
+  var fishes = [], bubbles = [], particles = [], pops = [], plankton = [];
+
+  var bgGrad = null, vignette = null, rays = [];
+
+  var keys = Object.create(null);
+  var pointer = { active: false, x: 0, y: 0 };
+
+  /* ---------------- 尺寸 & 背景 ---------------- */
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#062c4d');
+    bgGrad.addColorStop(0.42, '#0a4a74');
+    bgGrad.addColorStop(1, '#02131f');
+
+    vignette = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.25, W / 2, H * 0.5, Math.max(W, H) * 0.78);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,6,12,0.62)');
+
+    rays = [];
+    for (var i = 0; i < 6; i++) {
+      rays.push({
+        x: rand(-100, W + 100),
+        w: rand(50, 170),
+        a: rand(0.025, 0.075),
+        sp: rand(0.12, 0.34),
+        ph: rand(0, TAU)
+      });
+    }
+
+    plankton = [];
+    for (var j = 0; j < 46; j++) {
+      plankton.push({ x: rand(0, W), y: rand(0, H), r: rand(0.6, 1.9), a: rand(0.08, 0.3), sp: rand(3, 14) });
+    }
+
+    if (player.x === 0 && player.y === 0) { player.x = W / 2; player.y = H / 2; }
+    player.x = clamp(player.x, player.r, W - player.r);
+    player.y = clamp(player.y, player.r, H - player.r);
+  }
+  window.addEventListener('resize', resize);
+
+  /* ---------------- 声音 ---------------- */
+  var actx = null;
+  function audio() {
+    if (!actx) {
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) actx = new AC();
+      } catch (e) { actx = null; }
+    }
+    if (actx && actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function beep(freq, dur, type, vol, slideTo) {
+    if (muted) return;
+    var a = audio();
+    if (!a) return;
+    try {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, a.currentTime);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), a.currentTime + dur);
+      g.gain.setValueAtTime(0.0001, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(vol || 0.06, a.currentTime + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(); o.stop(a.currentTime + dur + 0.02);
+    } catch (e) { /* 忽略 */ }
+  }
+
+  /* ---------------- 实体 ---------------- */
+  function makeFish(r, x, y, dir, speed, hue, danger) {
+    return {
+      r: r, x: x, y: y, y0: y, dir: dir, speed: speed,
+      hue: hue, danger: !!danger,
+      t: rand(0, 10), freq: rand(1.1, 2.6),
+      amp: Math.min(r * 0.55, 17), phase: rand(0, TAU)
+    };
+  }
+
+  function spawnAmbient() {
+    var r = rand(8, 26);
+    var left = Math.random() < 0.5;
+    var y = rand(r + 30, Math.max(r + 40, H - r - 30));
+    fishes.push(makeFish(
+      r,
+      left ? -r - 30 : W + r + 30,
+      y,
+      left ? 1 : -1,
+      rand(45, 110),
+      rand(150, 210),
+      false
+    ));
+  }
+
+  function spawnFish() {
+    if (fishes.length > 24) return;
+    var maxR = Math.min(72, H * 0.2);
+    var factor = Math.random() < 0.6 ? rand(0.3, 0.85) : rand(1.15, 1.8);
+    var r = clamp(player.r * factor, 5, maxR);
+    var danger = r >= player.r * 0.92;
+    var left = Math.random() < 0.5;
+    var y = rand(r + 26, Math.max(r + 36, H - r - 26));
+    var speed = (28 + 150 * (1 - clamp(r / maxR, 0, 1))) * (0.85 + Math.min(elapsed / 60, 1) * 0.55);
+
+    fishes.push(makeFish(
+      r,
+      left ? -r - 30 : W + r + 30,
+      y,
+      left ? 1 : -1,
+      speed,
+      danger ? rand(334, 358) : rand(150, 200),
+      danger
+    ));
+  }
+
+  function burst(x, y, hue, n, color) {
+    if (particles.length > 320) return;
+    for (var i = 0; i < n; i++) {
+      var a = rand(0, TAU), sp = rand(40, 250);
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: rand(0.35, 0.85), max: 0.85,
+        r: rand(1.4, 4),
+        color: color || ('hsl(' + hue + ',85%,72%)')
+      });
+    }
+  }
+
+  /* ---------------- 更新 ---------------- */
+  function updateBubbles(dt) {
+    for (var i = 0; i < bubbles.length; i++) {
+      var b = bubbles[i];
+      b.t += dt;
+      b.y -= b.sp * dt;
+      b.x += Math.sin(b.t * 1.6 + b.ph) * 12 * dt;
+      if (b.y < -b.r - 6) {
+        b.y = H + rand(10, 90);
+        b.x = rand(0, W);
+        b.r = rand(1.5, 5.5);
+        b.sp = rand(14, 46);
+      }
+    }
+  }
+
+  function updateParticles(dt) {
+    var drag = Math.pow(0.12, dt);
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= drag;
+      p.vy = p.vy * drag + 40 * dt;
+    }
+  }
+
+  function updatePops(dt) {
+    for (var i = pops.length - 1; i >= 0; i--) {
+      var p = pops[i];
+      p.life -= dt;
+      p.y -= 42 * dt;
+      if (p.life <= 0) pops.splice(i, 1);
+    }
+  }
+
+  function updateFishes(dt) {
+    for (var i = fishes.length - 1; i >= 0; i--) {
+      var f = fishes[i];
+      f.t += dt;
+      f.x += f.dir * f.speed * dt;
+      f.y = f.y0 + Math.sin(f.t * f.freq + f.phase) * f.amp;
+      var m = f.r + 90;
+      if (f.x < -m || f.x > W + m) fishes.splice(i, 1);
+    }
+  }
+
+  function updatePlayer(dt) {
+    var MAXV = 560;
+    var ix = 0, iy = 0;
+    if (keys['arrowleft'] || keys['a']) ix -= 1;
+    if (keys['arrowright'] || keys['d']) ix += 1;
+    if (keys['arrowup'] || keys['w']) iy -= 1;
+    if (keys['arrowdown'] || keys['s']) iy += 1;
+
+    var tvx = 0, tvy = 0;
+
+    if (ix || iy) {
+      var m = Math.hypot(ix, iy) || 1;
+      tvx = (ix / m) * MAXV;
+      tvy = (iy / m) * MAXV;
+      pointer.active = false;
+    } else if (pointer.active) {
+      var dx = pointer.x - player.x;
+      var dy = pointer.y - player.y;
+      var d = Math.hypot(dx, dy);
+      if (d > 5) {
+        var sp = Math.min(MAXV, d * 7.5);
+        tvx = (dx / d) * sp;
+        tvy = (dy / d) * sp;
+      }
+    }
+
+    var k = Math.min(1, dt * 13);
+    player.vx += (tvx - player.vx) * k;
+    player.vy += (tvy - player.vy) * k;
+
+    player.x += player.vx * dt;
+    player.y += player.vy * dt;
+    player.x = clamp(player.x, player.r * 1.5, W - player.r * 1.5);
+    player.y = clamp(player.y, player.r * 1.15, H - player.r * 1.15);
+
+    if (Math.abs(player.vx) > 18) player.face = player.vx > 0 ? 1 : -1;
+
+    // 尾迹气泡
+    player.bubbleT -= dt;
+    if (player.bubbleT <= 0 && bubbles.length < 90) {
+      player.bubbleT = 0.12;
+      bubbles.push({
+        x: player.x - player.face * player.r * 1.4,
+        y: player.y + rand(-4, 4),
+        r: rand(1.2, 3.2),
+        sp: rand(20, 50),
+        t: 0, ph: rand(0, TAU),
+        a: 0.5
+      });
+    }
+  }
+
+  function eatFish(f, idx) {
+    fishes.splice(idx, 1);
+    var pts = Math.max(5, Math.round(f.r * 7)) * combo;
+    score += pts;
+    combo = Math.min(9, combo + 1);
+    comboTimer = 2.4;
+    player.r = Math.min(48, player.r + Math.max(0.4, Math.min(1.6, f.r * 0.08)));
+    burst(f.x, f.y, f.hue, 10 + Math.min(10, Math.round(f.r)));
+    pops.push({ x: f.x, y: f.y - f.r * 0.6, text: '+' + pts, life: 0.85, max: 0.85, color: '#a8f2ff' });
+    beep(360 + combo * 58, 0.1, 'triangle', 0.05, 820);
+    popScore();
+    updateHUD();
+  }
+
+  function hitPlayer() {
+    lives--;
+    player.r = Math.max(13, player.r * 0.8);
+    player.invuln = 1.6;
+    shake = 20;
+    flash = 1;
+    burst(player.x, player.y, 0, 20, 'rgba(255,110,140,0.95)');
+    beep(190, 0.32, 'sawtooth', 0.085, 55);
+    updateHUD();
+    if (lives <= 0) gameOver();
+  }
+
+  function checkCollisions() {
+    for (var i = fishes.length - 1; i >= 0; i--) {
+      var f = fishes[i];
+      var dx = f.x - player.x, dy = f.y - player.y;
+      var d = Math.hypot(dx, dy) || 0.001;
+      var edible = f.r < player.r * 0.92;
+      if (edible) {
+        if (d < player.r * 0.85 + f.r * 0.7) eatFish(f, i);
+      } else if (player.invuln <= 0) {
+        if (d < player.r * 0.72 + f.r * 0.72) hitPlayer();
+      }
+    }
+  }
+
+  function update(dt, tsec) {
+    updateBubbles(dt);
+    updateParticles(dt);
+    updatePops(dt);
+    shake = Math.max(0, shake - 75 * dt);
+    flash = Math.max(0, flash - 2.4 * dt);
+
+    for (var i = 0; i < plankton.length; i++) {
+      var p = plankton[i];
+      p.x += p.sp * dt;
+      if (p.x > W + 4) { p.x = -4; p.y = rand(0, H); }
+    }
+
+    if (state === S.MENU) {
+      ambientTimer -= dt * 1000;
+      if (ambientTimer <= 0 && fishes.length < 8) { spawnAmbient(); ambientTimer = rand(500, 1300); }
+      updateFishes(dt);
+      player.t += dt;
+      player.x += (W / 2 - player.x) * Math.min(1, dt * 2);
+      player.y += ((H / 2 + Math.sin(tsec * 1.5) * 14) - player.y) * Math.min(1, dt * 3);
+      return;
+    }
+
+    if (state !== S.PLAY) return;
+
+    elapsed += dt;
+    player.t += dt;
+    if (player.invuln > 0) player.invuln -= dt;
+
+    updatePlayer(dt);
+    updateFishes(dt);
+
+    spawnTimer -= dt * 1000;
+    if (spawnTimer <= 0) {
+      spawnFish();
+      spawnEvery = clamp(960 - elapsed * 11, 300, 960);
+      spawnTimer = spawnEvery * rand(0.75, 1.25);
+    }
+
+    checkCollisions();
+
+    if (combo > 1) {
+      comboTimer -= dt;
+      if (comboTimer <= 0) { combo = 1; updateHUD(); }
+    }
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  function drawBackground(tsec) {
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    for (var i = 0; i < plankton.length; i++) {
+      var p = plankton[i];
+      ctx.fillStyle = 'rgba(180,235,255,' + p.a + ')';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, TAU);
+      ctx.fill();
+    }
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var j = 0; j < rays.length; j++) {
+      var r = rays[j];
+      var x = r.x + Math.sin(tsec * r.sp + r.ph) * 55;
+      ctx.beginPath();
+      ctx.moveTo(x, -60);
+      ctx.lineTo(x + r.w, -60);
+      ctx.lineTo(x + r.w * 1.85, H * 0.9);
+      ctx.lineTo(x + r.w * 0.85, H * 0.9);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(120,215,255,' + r.a + ')';
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawBubbles() {
+    ctx.save();
+    for (var i = 0; i < bubbles.length; i++) {
+      var b = bubbles[i];
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, TAU);
+      ctx.strokeStyle = 'rgba(190,240,255,0.35)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.32, 0, TAU);
+      ctx.fillStyle = 'rgba(230,250,255,0.5)';
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawFishShape(x, y, r, face, hue, t, alpha, isPlayer) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.scale(face, 1);
+
+    var wag = Math.sin(t * 9) * 0.32;
+    var sat = isPlayer ? 88 : 78;
+    var light = isPlayer ? 62 : 58;
+
+    // 尾巴
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.68, 0);
+    ctx.quadraticCurveTo(-r * 1.5, (-0.72 + wag) * r, -r * 1.85, (-0.32 + wag) * r);
+    ctx.quadraticCurveTo(-r * 1.12, 0, -r * 1.85, (0.32 + wag) * r);
+    ctx.quadraticCurveTo(-r * 1.5, (0.72 + wag) * r, -r * 0.68, 0);
+    ctx.fillStyle = 'hsl(' + hue + ',' + sat + '%,' + (light - 14) + '%)';
+    ctx.fill();
+
+    // 背鳍
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.34, -r * 0.55);
+    ctx.quadraticCurveTo(r * 0.04, -r * 1.28 + wag * r * 0.4, r * 0.46, -r * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = 'hsl(' + hue + ',' + sat + '%,' + (light - 6) + '%)';
+    ctx.fill();
+
+    // 腹鳍
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.08, r * 0.55);
+    ctx.quadraticCurveTo(r * 0.12, r * 0.98, r * 0.42, r * 0.44);
+    ctx.closePath();
+    ctx.fillStyle = 'hsl(' + hue + ',' + sat + '%,' + (light - 18) + '%)';
+    ctx.fill();
+
+    // 身体
+    var g = ctx.createRadialGradient(r * 0.1, -r * 0.38, r * 0.12, 0, 0, r * 1.2);
+    g.addColorStop(0, 'hsl(' + hue + ',' + sat + '%,' + (light + 24) + '%)');
+    g.addColorStop(0.55, 'hsl(' + hue + ',' + sat + '%,' + light + '%)');
+    g.addColorStop(1, 'hsl(' + hue + ',' + sat + '%,' + (light - 15) + '%)');
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 1.12, r * 0.78, 0, 0, TAU);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // 腹部柔光
+    ctx.beginPath();
+    ctx.ellipse(r * 0.04, r * 0.3, r * 0.72, r * 0.28, 0, 0, TAU);
+    ctx.fillStyle = 'hsla(' + hue + ',' + sat + '%,' + (light + 32) + '%,0.28)';
+    ctx.fill();
+
+    // 眼睛
+    var ex = r * 0.5, ey = -r * 0.2, er = Math.max(1.6, r * 0.24);
+    ctx.beginPath();
+    ctx.arc(ex, ey, er, 0, TAU);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + er * 0.16, ey + er * 0.06, er * 0.52, 0, TAU);
+    ctx.fillStyle = '#10202c';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + er * 0.38, ey - er * 0.2, er * 0.19, 0, TAU);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fill();
+
+    // 嘴
+    if (r > 7) {
+      ctx.beginPath();
+      ctx.arc(r * 0.86, r * 0.2, r * 0.16, -0.4, 0.9);
+      ctx.strokeStyle = 'hsla(' + hue + ',' + sat + '%,' + (light - 30) + '%,0.75)';
+      ctx.lineWidth = Math.max(1, r * 0.055);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawPlayer(tsec) {
+    var alpha = 1;
+    if (player.invuln > 0) {
+      alpha = 0.35 + 0.65 * Math.abs(Math.sin(tsec * 18));
+    }
+    // 光环
+    if (player.invuln > 0) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r * 1.7, 0, TAU);
+      ctx.strokeStyle = 'rgba(255,225,120,' + (0.35 * alpha) + ')';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawFishShape(player.x, player.y, player.r, player.face, 35, player.t, alpha, true);
+  }
+
+  function drawParticles() {
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      var a = clamp(p.life / p.max, 0, 1);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * a, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawPops() {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (var i = 0; i < pops.length; i++) {
+      var p = pops[i];
+      var a = clamp(p.life / p.max, 0, 1);
+      ctx.globalAlpha = a;
+      ctx.font = '700 17px "PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function draw(tsec) {
+    ctx.save();
+    if (shake > 0.3) {
+      ctx.translate(rand(-shake, shake) * 0.5, rand(-shake, shake) * 0.5);
+    }
+
+    drawBackground(tsec);
+    drawBubbles();
+
+    for (var i = 0; i < fishes.length; i++) {
+      var f = fishes[i];
+      drawFishShape(f.x, f.y, f.r, f.dir, f.hue, f.t, 1, false);
+    }
+
+    drawPlayer(tsec);
+    drawParticles();
+    drawPops();
+
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    if (flash > 0.01) {
+      ctx.fillStyle = 'rgba(255,70,110,' + (flash * 0.32) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  /* ---------------- HUD ---------------- */
+  var scorePopTimer = null;
+  function popScore() {
+    elScore.classList.add('pop');
+    clearTimeout(scorePopTimer);
+    scorePopTimer = setTimeout(function () { elScore.classList.remove('pop'); }, 110);
+  }
+
+  function updateHUD() {
+    elScore.textContent = score;
+    elLives.textContent = new Array(Math.max(0, lives) + 1).join('🐟');
+    elBestTop.textContent = best;
+    if (combo > 1) {
+      elCombo.textContent = '连击 ×' + combo;
+      elCombo.style.opacity = 1;
+    } else {
+      elCombo.style.opacity = 0;
+    }
+  }
+
+  /* ---------------- 记录 / 存档 ---------------- */
+  var K_BEST = 'benben_best';
+  var K_REC = 'benben_records';
+  var K_FIRST = 'benben_first';
+
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtDate(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + ' 年 ' + (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日';
+  }
+  function fmtShort(ts) {
+    var d = new Date(ts);
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function firstPlayTs() {
+    var t = 0;
+    try { t = Number(localStorage.getItem(K_FIRST) || 0) || 0; } catch (e) {}
+    if (!t) {
+      var recs = loadRecords();
+      if (recs.length) t = recs[0].t;
+    }
+    return t;
+  }
+
+  function loadRecords() {
+    try {
+      var a = JSON.parse(localStorage.getItem(K_REC) || '[]');
+      if (!Array.isArray(a)) return [];
+      return a.filter(function (r) {
+        return r && typeof r.s === 'number' && typeof r.t === 'number' && isFinite(r.s);
+      });
+    } catch (e) { return []; }
+  }
+
+  function saveRecords(recs) {
+    if (recs.length > 80) recs = recs.slice(recs.length - 80);
+    try { localStorage.setItem(K_REC, JSON.stringify(recs)); } catch (e) {}
+  }
+
+  function pushRecord(s) {
+    var recs = loadRecords();
+    recs.push({ t: Date.now(), s: s });
+    saveRecords(recs);
+    try {
+      if (!localStorage.getItem(K_FIRST)) localStorage.setItem(K_FIRST, String(Date.now()));
+    } catch (e) {}
+  }
+
+  function renderMini() {
+    elBestTop.textContent = best;
+    var recs = loadRecords();
+    if (!recs.length) {
+      elPlays.textContent = '还没下过海';
+      elLast.textContent = '';
+      return;
+    }
+    elPlays.textContent = '第 ' + recs.length + ' 次下海';
+    var last = recs[recs.length - 1];
+    var days = Math.floor((Date.now() - last.t) / 86400000);
+    elLast.textContent = days <= 0 ? '今天来过' : '距上次 ' + days + ' 天';
+  }
+
+  function renderMem() {
+    var recs = loadRecords();
+    if (!recs.length) {
+      memBody.innerHTML = '<p class="memEmpty">这里还是空的。<br>玩完一局，它就会记住今天。</p>';
+      return;
+    }
+    var bestRec = recs[0];
+    for (var k = 1; k < recs.length; k++) if (recs[k].s > bestRec.s) bestRec = recs[k];
+
+    var out = '';
+    out += '<p class="memLine">第一次下海：<b>' + fmtDate(firstPlayTs() || recs[0].t) + '</b></p>';
+    out += '<p class="memLine">一共被吃掉 <b>' + recs.length + '</b> 次</p>';
+    out += '<p class="memLine">最高分：<b class="gold">' + bestRec.s + '</b></p>';
+    out += '<p class="memLine" style="font-size:12px;color:#6fa4bf">那个纪录发生在 ' + fmtDate(bestRec.t) + '</p>';
+    out += '<div class="memList">';
+    var start = Math.max(0, recs.length - 12);
+    for (var i = recs.length - 1; i >= start; i--) {
+      var r = recs[i];
+      out += '<div class="memRow' + (r.s === bestRec.s ? ' top' : '') + '">'
+        + '<span class="d">' + fmtShort(r.t) + '</span>'
+        + '<span class="s">' + r.s + '</span></div>';
+    }
+    out += '</div>';
+    memBody.innerHTML = out;
+  }
+
+  function openMem() {
+    renderMem();
+    memPanel.classList.remove('hidden');
+  }
+  function closeMem() {
+    memPanel.classList.add('hidden');
+  }
+
+  /* ---- 封存：生成一个自带全部记录的单文件 ---- */
+  function buildArchiveHtml() {
+    var root = document.documentElement.cloneNode(true);
+
+    var b = root.querySelector('body');
+    if (b) b.className = '';
+
+    var panelClass = {
+      startPanel: 'overlay',
+      overPanel: 'overlay hidden',
+      pausePanel: 'overlay hidden',
+      memPanel: 'overlay hidden'
+    };
+    Object.keys(panelClass).forEach(function (id) {
+      var el = root.querySelector('#' + id);
+      if (el) el.className = panelClass[id];
+    });
+
+    var cv = root.querySelector('#game');
+    if (cv) {
+      cv.removeAttribute('width');
+      cv.removeAttribute('height');
+      cv.removeAttribute('style');
+    }
+
+    var clear = ['combo', 'finalScore', 'finalBest', 'memBody', 'playsStat', 'lastStat'];
+    clear.forEach(function (id) {
+      var el = root.querySelector('#' + id);
+      if (el) el.innerHTML = '';
+    });
+    var scEl = root.querySelector('#score');
+    if (scEl) scEl.textContent = '0';
+    var lvEl = root.querySelector('#lives');
+    if (lvEl) lvEl.textContent = '🐟🐟🐟';
+    var btEl = root.querySelector('#bestTop');
+    if (btEl) btEl.textContent = String(best);
+    var cbEl = root.querySelector('#combo');
+    if (cbEl) cbEl.removeAttribute('style');
+
+    var payload = {
+      v: 2,
+      born: firstPlayTs(),
+      exportedAt: Date.now(),
+      best: best,
+      records: loadRecords()
+    };
+
+    var s = document.createElement('script');
+    s.textContent = 'window.__BENBEN_ARCHIVE__=' + JSON.stringify(payload) + ';';
+    var head = root.querySelector('head');
+    if (head) head.insertBefore(s, head.firstChild);
+
+    return '<!doctype html>\n' + root.outerHTML;
+  }
+
+  function saveArchive() {
+    var html;
+    try {
+      html = buildArchiveHtml();
+    } catch (e) {
+      alert('封存失败：' + e.message);
+      return;
+    }
+    var d = new Date();
+    var name = '笨笨鱼存档-' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '.html';
+    try {
+      var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1500);
+      beep(720, 0.12, 'sine', 0.06, 980);
+    } catch (e) {
+      alert('这个浏览器不让直接下载，可以按 Ctrl+S 另存页面。');
+    }
+  }
+
+  /* ---- 打开一个存档文件时，把里面的记录合并回来 ---- */
+  function seedFromArchive() {
+    var a = window.__BENBEN_ARCHIVE__;
+    if (!a) return;
+    try {
+      var recs = loadRecords();
+      var seen = {};
+      for (var i = 0; i < recs.length; i++) seen[recs[i].t] = true;
+      if (Array.isArray(a.records)) {
+        for (var j = 0; j < a.records.length; j++) {
+          var r = a.records[j];
+          if (r && typeof r.t === 'number' && typeof r.s === 'number' && !seen[r.t]) {
+            recs.push({ t: r.t, s: r.s });
+            seen[r.t] = true;
+          }
+        }
+      }
+      recs.sort(function (x, y) { return x.t - y.t; });
+      saveRecords(recs);
+      try {
+        if (a.born && !localStorage.getItem(K_FIRST)) localStorage.setItem(K_FIRST, String(a.born));
+      } catch (e) {}
+      if (typeof a.best === 'number' && a.best > best) {
+        best = a.best;
+        try { localStorage.setItem(K_BEST, String(best)); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  /* ---------------- 流程 ---------------- */
+  function startGame() {
+    audio();
+    state = S.PLAY;
+    score = 0; lives = 3; combo = 1; comboTimer = 0;
+    elapsed = 0; spawnTimer = 400; spawnEvery = 900;
+    shake = 0; flash = 0;
+    player.r = 14;
+    player.x = W / 2; player.y = H / 2;
+    player.vx = 0; player.vy = 0;
+    player.face = 1; player.invuln = 1.4;
+    fishes = []; particles = []; pops = [];
+    pointer.active = false;
+    keys = Object.create(null);
+
+    startPanel.classList.add('hidden');
+    overPanel.classList.add('hidden');
+    pausePanel.classList.add('hidden');
+    memPanel.classList.add('hidden');
+    document.body.classList.add('playing');
+    updateHUD();
+  }
+
+  function gameOver() {
+    state = S.OVER;
+    var isNew = score > best;
+    if (isNew) {
+      best = score;
+      try { localStorage.setItem('benben_best', String(best)); } catch (e) {}
+    }
+    elFinal.textContent = score;
+    elFinalBest.textContent = best;
+    elFinalBest.classList.toggle('newBest', isNew);
+    pushRecord(score);
+    renderMini();
+    overPanel.classList.remove('hidden');
+    beep(300, 0.5, 'sine', 0.07, 90);
+    setTimeout(function () { beep(200, 0.6, 'sine', 0.06, 60); }, 140);
+    updateHUD();
+  }
+
+  function togglePause() {
+    if (state === S.PLAY) {
+      state = S.PAUSE;
+      keys = Object.create(null);
+      pointer.active = false;
+      pausePanel.classList.remove('hidden');
+    } else if (state === S.PAUSE) {
+      state = S.PLAY;
+      pausePanel.classList.add('hidden');
+      last = performance.now();
+    }
+  }
+
+  /* ---------------- 输入 ---------------- */
+  window.addEventListener('keydown', function (e) {
+    var k = (e.key || '').toLowerCase();
+    if (k === 'arrowleft' || k === 'arrowright' || k === 'arrowup' || k === 'arrowdown' || k === ' ') {
+      e.preventDefault();
+    }
+    if (k === ' ' || k === 'enter') {
+      if (state === S.MENU || state === S.OVER) startGame();
+      else togglePause();
+      return;
+    }
+    if (k === 'escape' || k === 'p') {
+      if (state === S.PLAY || state === S.PAUSE) togglePause();
+      return;
+    }
+    keys[k] = true;
+  });
+
+  window.addEventListener('keyup', function (e) {
+    keys[(e.key || '').toLowerCase()] = false;
+  });
+
+  function setPointer(x, y) {
+    pointer.x = x;
+    pointer.y = y;
+    pointer.active = true;
+  }
+
+  window.addEventListener('pointermove', function (e) {
+    if (e.target && e.target.closest && e.target.closest('button')) return;
+    setPointer(e.clientX, e.clientY);
+  });
+  window.addEventListener('pointerdown', function (e) {
+    if (e.target && e.target.closest && e.target.closest('button')) return;
+    audio();
+    setPointer(e.clientX, e.clientY);
+  });
+
+  window.addEventListener('blur', function () {
+    if (state === S.PLAY) togglePause();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && state === S.PLAY) togglePause();
+  });
+
+  btnStart.addEventListener('click', startGame);
+  btnRestart.addEventListener('click', startGame);
+  btnResume.addEventListener('click', togglePause);
+  btnPause.addEventListener('click', togglePause);
+
+  var memOpenBtns = document.querySelectorAll('.memOpen');
+  for (var mob = 0; mob < memOpenBtns.length; mob++) {
+    memOpenBtns[mob].addEventListener('click', openMem);
+  }
+  memCloseBtn.addEventListener('click', closeMem);
+  var memSaveBtn = document.getElementById('memSaveBtn');
+  if (memSaveBtn) memSaveBtn.addEventListener('click', saveArchive);
+
+  btnSound.addEventListener('click', function () {
+    muted = !muted;
+    btnSound.textContent = muted ? '🔇' : '🔊';
+    if (!muted) beep(660, 0.08, 'sine', 0.05);
+  });
+
+  /* ---------------- 主循环 ---------------- */
+  var last = performance.now();
+  function loop(now) {
+    var dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.05) dt = 0.05;
+    if (dt < 0) dt = 0;
+    update(dt, now / 1000);
+    draw(now / 1000);
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------------- 初始化 ---------------- */
+  resize();
+  for (var i = 0; i < 26; i++) {
+    bubbles.push({
+      x: rand(0, W),
+      y: rand(0, H),
+      r: rand(1.5, 5.5),
+      sp: rand(12, 46),
+      t: rand(0, 10),
+      ph: rand(0, TAU)
+    });
+  }
+  player.x = W / 2;
+  player.y = H / 2;
+  seedFromArchive();
+  renderMini();
+  updateHUD();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
